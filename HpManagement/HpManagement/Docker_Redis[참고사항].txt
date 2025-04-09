@@ -1,0 +1,27 @@
+﻿[Docker Desktop]
+-- Redis 도커 환경에서 실행하기.
+
+1. Redis Docker 이미지 가져오기
+docker pull redis:latest
+
+2. Redis 컨테이너 실행
+docker run -d --name redis-cache -p 6379:6379 -v redis-data:/data redis:latest redis-server --appendonly yes
+/*
+ -d : 백그라운드 모드
+ --name redis-cache : 컨테이너 이름 지정
+ -p 6379:6379 : 호스트 6379 포트를 컨테이너 6379 포트에 바인딩
+ -v redis-data:/data : Docker 볼륨을 /data에 마운트
+ redis-sever --appendonly yes : AOF(Append Only File) 활성화
+*/
+
+3. 컨테이너 정상 동작 확인
+docker ps
+
+4. ping 테스트
+docker exec -it redis-cache redis-cli PING
+
+
+HGET <key> data : 실제 저장된 값
+TTL <key> : 남은 유효시간(초)
+HGET <key> absexp : 절대 만료 시각(Unix ticks)
+HGET <key> sldexp : 슬라이딩 만료 기간(밀리초)
