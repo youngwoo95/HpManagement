@@ -49,8 +49,8 @@ namespace HpManagement.Services.Login
 
                 List<Claim> authClaims = new List<Claim>();
                 authClaims.Add(new Claim("userId", AdminModel.USERID));
-                authClaims.Add(new Claim("Name", AdminModel.USERNM));
-                authClaims.Add(new Claim("Role", "Admin"));
+                authClaims.Add(new Claim("name", AdminModel.USERNM));
+                authClaims.Add(new Claim("role", "Admin"));
 
                 // JWT 인증 페이로드 사인 비밀키
                 var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JWT:authSigningKey"]!));
@@ -128,7 +128,7 @@ namespace HpManagement.Services.Login
                 List<Claim> authClaims = new List<Claim>();
                 authClaims.Add(new Claim("userId", AdminModel.USERID)); // UserID
                 authClaims.Add(new Claim("Name", AdminModel.USERNM));
-                authClaims.Add(new Claim("Role", "Admin"));
+                authClaims.Add(new Claim("role", "Admin"));
 
                 // JWT 인증 페이로드 사인 비밀키
                 var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JWT:authSigningKey"]!));
@@ -169,9 +169,56 @@ namespace HpManagement.Services.Login
         /// <param name="dto"></param>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        public Task<ResponseModel<TokenDTO>?> MobileLoginService(LoginDTO dto)
+        public async Task<ResponseModel<TokenDTO>?> MobileLoginService(LoginDTO dto)
         {
-            throw new NotImplementedException();
+            try
+            {
+                if(String.IsNullOrWhiteSpace(dto.LoginID))
+                {
+                    return new ResponseModel<TokenDTO>() { data = null, code = 204 };
+                }
+
+                AdminModel? AdminModel = await LoginRepository.GetAdminInfoAsync(dto.LoginID);
+                if (AdminModel is null)
+                    return new ResponseModel<TokenDTO>() { data = null, code = 204 };
+
+                List<Claim> authClaims = new List<Claim>();
+                authClaims.Add(new Claim("userId", AdminModel.USERID));
+                authClaims.Add(new Claim("name", AdminModel.USERNM));
+                authClaims.Add(new Claim("role", "Admin"));
+
+                // JWT 인증 페이로드 사인 비밀키
+                var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JWT:authSigningKey"]));
+
+                JwtSecurityToken token = new JwtSecurityToken(
+                    issuer: Configuration["JWT:Issuer"],
+                    audience: Configuration["JWT:Audience"],
+                    expires: DateTime.Now.AddMinutes(15), // 15분 후 만료
+                    claims: authClaims,
+                    signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256));
+
+                // accessToken
+                string accessToken = new JwtSecurityTokenHandler().WriteToken(token);
+
+                // RefreshToken
+                string refreshToken = TokenComm.GenerateRefreshToken();
+
+                // Redis 캐쉬 저장 - 모바일은 Long Time
+                await RedisCacheService.SetAsync(dto.LoginID, refreshToken, TimeSpan.FromDays(60), TimeSpan.FromDays(1));
+
+                var tokenResult = new TokenDTO
+                {
+                    accessToken = accessToken,
+                    refreshToken = refreshToken
+                };
+
+                return new ResponseModel<TokenDTO>() { data = tokenResult, code = 200 };
+            }
+            catch(Exception ex)
+            {
+                LoggerService.LogMessage(ex.ToString());
+                return new ResponseModel<TokenDTO>() { data = null, code = 500 };
+            }
         }
 
         /// <summary>
@@ -180,9 +227,76 @@ namespace HpManagement.Services.Login
         /// <param name="refreshTokenDTO"></param>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        public Task<ResponseModel<TokenDTO>?> MobileRefreshTokenService(RefreshTokenDTO refreshTokenDTO)
+        public async Task<ResponseModel<TokenDTO>?> MobileRefreshTokenService(RefreshTokenDTO refreshTokenDTO)
         {
-            throw new NotImplementedException();
+            try
+            {
+                if(String.IsNullOrWhiteSpace(refreshTokenDTO.UserId))
+                {
+                    return new ResponseModel<TokenDTO>() { data = null, code = 204 };
+                }
+
+                // Redis 캐시에서 저장된 Refresh 토큰을 조회
+                var storedRefreshToken = await RedisCacheService.GetAsync(refreshTokenDTO.UserId);
+
+                // 토큰이 없으면 401 리턴
+                if(String.IsNullOrEmpty(storedRefreshToken))
+                {
+#if DEBUG
+                    Console.WriteLine("RefreshToken이 없습니다.");
+#endif
+                    return new ResponseModel<TokenDTO>() { data = null, code = 401 };
+                }
+
+                // 클라이언트가 보낸 Refresh 토큰과 저장된 토큰 비교
+                if(storedRefreshToken != refreshTokenDTO.RefreshToken)
+                {
+                    return new ResponseModel<TokenDTO>() { data = null, code = 401 };
+                }
+
+                /*
+                 UserId로 DB 조회 후 접근제한됐는지 & 진짜있는지 검사를 다시 하면 좋음
+                 */
+                AdminModel? AdminModel = await LoginRepository.GetAdminInfoAsync(refreshTokenDTO.UserId);
+                if (AdminModel is null)
+                    return new ResponseModel<TokenDTO>() { data = null, code = 204 };
+
+                List<Claim> authClaims = new List<Claim>();
+                authClaims.Add(new Claim("userId", AdminModel.USERID)); // USER ID
+                authClaims.Add(new Claim("name", AdminModel.USERNM));
+                authClaims.Add(new Claim("role", "Admin"));
+
+                // JWT 인증 페이로드 사인 비밀키
+                var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JWT:authSigningKey"]!));
+                JwtSecurityToken newToke = new JwtSecurityToken(
+                    issuer: Configuration["JWT:Issuer"],
+                    audience: Configuration["JWT:Audience"],
+                    expires: DateTime.Now.AddMinutes(15),
+                    claims: authClaims,
+                    signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256));
+
+                string newAccessToken = new JwtSecurityTokenHandler().WriteToken(newToke);
+
+                // 기존 Refresh Token 무효화 후 새 Refresh Token 발급
+                string newRefreshToken = TokenComm.GenerateRefreshToken();
+
+                await RedisCacheService.RemoveAsync(refreshTokenDTO.UserId);
+
+                await RedisCacheService.SetAsync(refreshTokenDTO.UserId, newRefreshToken, TimeSpan.FromDays(60), TimeSpan.FromDays(1));
+
+                var tokenResult = new TokenDTO
+                {
+                    accessToken = newAccessToken,
+                    refreshToken = newRefreshToken
+                };
+
+                return new ResponseModel<TokenDTO>() { data = tokenResult, code = 200 };
+            }
+            catch(Exception ex)
+            {
+                LoggerService.LogMessage(ex.ToString());
+                return new ResponseModel<TokenDTO>() { data = null, code = 500 };
+            }
         }
     }
 }

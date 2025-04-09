@@ -1,11 +1,14 @@
 ﻿namespace HpManagement.DBModel
 {
+    /// <summary>
+    /// 이송관리자 테이블 모델 클래스
+    /// </summary>
     public class AdminModel
     {
         /// <summary>
         /// 사용자 ID
         /// </summary>
-        public string? USERID { get; set; }
+        public string USERID { get; set; } = null!;
 
         /// <summary>
         /// 패스워드
