@@ -58,7 +58,7 @@
         /// <summary>
         /// 수정일
         /// </summary>
-        public DateOnly? LAST_UPDT_DT { get; set; }
+        public DateTime? LAST_UPDT_DT { get; set; }
 
         /// <summary>
         /// 사용여부

@@ -8,7 +8,7 @@
         /// <summary>
         /// 근무일자
         /// </summary>
-        public DateOnly? RDATE { get; set; }
+        public DateTime? RDATE { get; set; }
 
         /// <summary>
         /// 사원 ID

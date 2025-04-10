@@ -69,7 +69,7 @@ namespace HpManagement.Services.Login
                 string refreshToken = TokenComm.GenerateRefreshToken();
 
                 // Redis 캐쉬 저장
-                await RedisCacheService.SetAsync(dto.LoginID, refreshToken, TimeSpan.FromDays(3), TimeSpan.FromHours(1));
+                await RedisCacheService.SetAsync(dto.LoginID, refreshToken);
                 
 
                 var tokenResult = new TokenDTO
@@ -95,16 +95,15 @@ namespace HpManagement.Services.Login
         {
             try
             {
-                if(String.IsNullOrWhiteSpace(refreshTokenDTO.UserId))
+                if(String.IsNullOrWhiteSpace(refreshTokenDTO.UserId) || String.IsNullOrWhiteSpace(refreshTokenDTO.RefreshToken))
                 {
                     return new ResponseModel<TokenDTO>() { data = null, code = 204 };
                 }
 
-                // Redis 캐시에서 저장된 Refresh 토큰을 조회
-                var storedRefreshToken = await RedisCacheService.GetAsync(refreshTokenDTO.UserId);
+                // Refresh Token 유효성 검사 (GetAsync 호출만으로 슬라이딩 만료 연장)
+                bool isValid = await RedisCacheService.GetAsync(refreshTokenDTO.UserId, refreshTokenDTO.RefreshToken);
 
-                // 2) 토큰이 없으면 401 리턴
-                if (string.IsNullOrEmpty(storedRefreshToken))
+                if(!isValid)
                 {
 #if DEBUG
                     Console.WriteLine("RefreshToken이 없습니다.");
@@ -112,16 +111,10 @@ namespace HpManagement.Services.Login
                     return new ResponseModel<TokenDTO>() { data = null, code = 401 };
                 }
 
-                // 클라이언트가 보낸 Refresh 토큰과 저장된 토큰 비교
-                if (storedRefreshToken != refreshTokenDTO.RefreshToken)
-                {
-                    return new ResponseModel<TokenDTO>() { data = null, code = 401 };
-                }
-
                 /*
                   UserId로 DB 조회 후 접근제한됐는지 & 진짜있는지 검사를 다시 하면 좋음
                 */
-                AdminModel? AdminModel = await LoginRepository.GetAdminInfoAsync(refreshTokenDTO.UserId);
+                var AdminModel = await LoginRepository.GetAdminInfoAsync(refreshTokenDTO.UserId);
                 if (AdminModel is null)
                     return new ResponseModel<TokenDTO>() { data = null, code = 204 };
 
@@ -142,12 +135,18 @@ namespace HpManagement.Services.Login
                 string newAccessToken = new JwtSecurityTokenHandler().WriteToken(newToken);
 
                 // 기존 Refresh Token 무효화 후 새 Refresh Token 발급
-                string newRefreshToken = TokenComm.GenerateRefreshToken();
 
-                await RedisCacheService.RemoveAsync(refreshTokenDTO.UserId);
-                
-                await RedisCacheService.SetAsync(refreshTokenDTO.UserId, newRefreshToken, TimeSpan.FromDays(3), TimeSpan.FromHours(1));
-                
+                string? newRefreshToken = await RedisCacheService.RotateRefreshTokenAsync(
+                      refreshTokenDTO.UserId,
+                      refreshTokenDTO.RefreshToken
+                );
+
+                if (newRefreshToken == null)
+                {
+                    // 회전에 실패하면 인증 오류로 간주
+                    return new ResponseModel<TokenDTO> { data = null, code = 401 };
+                }
+
                 var tokenResult = new TokenDTO
                 {
                     accessToken = newAccessToken,
@@ -204,7 +203,7 @@ namespace HpManagement.Services.Login
                 string refreshToken = TokenComm.GenerateRefreshToken();
 
                 // Redis 캐쉬 저장 - 모바일은 Long Time
-                await RedisCacheService.SetAsync(dto.LoginID, refreshToken, TimeSpan.FromDays(60), TimeSpan.FromDays(1));
+                await RedisCacheService.SetAsync(dto.LoginID, refreshToken);
 
                 var tokenResult = new TokenDTO
                 {
@@ -231,26 +230,19 @@ namespace HpManagement.Services.Login
         {
             try
             {
-                if(String.IsNullOrWhiteSpace(refreshTokenDTO.UserId))
+                if(String.IsNullOrWhiteSpace(refreshTokenDTO.UserId) || String.IsNullOrWhiteSpace(refreshTokenDTO.RefreshToken))
                 {
                     return new ResponseModel<TokenDTO>() { data = null, code = 204 };
                 }
 
-                // Redis 캐시에서 저장된 Refresh 토큰을 조회
-                var storedRefreshToken = await RedisCacheService.GetAsync(refreshTokenDTO.UserId);
+                // Redis Token 유효성 검사 (GetAsync 호출만으로 슬라이딩 만료 연장)
+                bool isValid = await RedisCacheService.GetAsync(refreshTokenDTO.UserId, refreshTokenDTO.RefreshToken);
 
-                // 토큰이 없으면 401 리턴
-                if(String.IsNullOrEmpty(storedRefreshToken))
+                if(!isValid)
                 {
 #if DEBUG
                     Console.WriteLine("RefreshToken이 없습니다.");
 #endif
-                    return new ResponseModel<TokenDTO>() { data = null, code = 401 };
-                }
-
-                // 클라이언트가 보낸 Refresh 토큰과 저장된 토큰 비교
-                if(storedRefreshToken != refreshTokenDTO.RefreshToken)
-                {
                     return new ResponseModel<TokenDTO>() { data = null, code = 401 };
                 }
 
@@ -278,11 +270,17 @@ namespace HpManagement.Services.Login
                 string newAccessToken = new JwtSecurityTokenHandler().WriteToken(newToke);
 
                 // 기존 Refresh Token 무효화 후 새 Refresh Token 발급
-                string newRefreshToken = TokenComm.GenerateRefreshToken();
 
-                await RedisCacheService.RemoveAsync(refreshTokenDTO.UserId);
+                string? newRefreshToken = await RedisCacheService.RotateRefreshTokenAsync(
+                      refreshTokenDTO.UserId,
+                      refreshTokenDTO.RefreshToken
+                );
 
-                await RedisCacheService.SetAsync(refreshTokenDTO.UserId, newRefreshToken, TimeSpan.FromDays(60), TimeSpan.FromDays(1));
+                if (newRefreshToken == null)
+                {
+                    // 회전에 실패하면 인증 오류로 간주
+                    return new ResponseModel<TokenDTO> { data = null, code = 401 };
+                }
 
                 var tokenResult = new TokenDTO
                 {

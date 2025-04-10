@@ -8,7 +8,7 @@
         /// <summary>
         /// 근무일
         /// </summary>
-        public DateOnly SCHD_DATE { get; set; }
+        public DateTime SCHD_DATE { get; set; }
 
         /// <summary>
         /// 근무조

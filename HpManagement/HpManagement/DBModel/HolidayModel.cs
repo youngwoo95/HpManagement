@@ -8,7 +8,7 @@
         /// <summary>
         /// 휴일일자
         /// </summary>
-        public DateOnly DT { get; set; }
+        public DateTime DT { get; set; }
         
         /// <summary>
         /// 휴일설명
@@ -18,7 +18,7 @@
         /// <summary>
         /// 등록일자
         /// </summary>
-        public DateOnly? REG_DT { get; set; }
+        public DateTime? REG_DT { get; set; }
 
         /// <summary>
         /// 등록자

@@ -33,6 +33,6 @@
         /// <summary>
         /// 등록일
         /// </summary>
-        public DateOnly? RDATE { get; set; }
+        public DateTime? RDATE { get; set; }
     }
 }

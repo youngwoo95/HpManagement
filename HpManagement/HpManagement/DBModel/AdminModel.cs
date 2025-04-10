@@ -33,12 +33,12 @@
         /// <summary>
         /// 등록일자
         /// </summary>
-        public DateOnly? RDATE { get; set; }
+        public DateTime? RDATE { get; set; }
 
         /// <summary>
         /// 해지일자
         /// </summary>
-        public DateOnly? CDATE { get; set; }
+        public DateTime? CDATE { get; set; }
 
         /// <summary>
         /// 관리자

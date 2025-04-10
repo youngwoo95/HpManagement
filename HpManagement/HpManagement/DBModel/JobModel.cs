@@ -8,7 +8,7 @@
         /// <summary>
         /// 호출일자
         /// </summary>
-        public DateOnly? CALLDATE { get; set; }
+        public DateTime? CALLDATE { get; set; }
 
         /// <summary>
         /// 호출부서

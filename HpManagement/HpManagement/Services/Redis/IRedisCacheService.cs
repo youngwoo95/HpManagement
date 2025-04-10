@@ -6,18 +6,18 @@
         /// Redis INSERT
         /// </summary>
         /// <returns></returns>
-        public Task SetAsync(string key, string value, TimeSpan absoluteExpire, TimeSpan slidingExpire);
+        public Task SetAsync(string key, string refreshToken);
 
         /// <summary>
         /// Redis GET
         /// </summary>
         /// <returns></returns>
-        public Task<string?> GetAsync(string key);
+        public Task<bool> GetAsync(string key, string refreshToken);
 
         /// <summary>
         /// Redis DELETE
         /// </summary>
         /// <returns></returns>
-        public Task RemoveAsync(string key);
+        public Task<string?> RotateRefreshTokenAsync(string key, string refreshToken);
     }
 }
