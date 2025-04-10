@@ -27,7 +27,8 @@
             set
             {
                 // 소문자로 변환
-                loginpw = value?.ToLower();
+                //loginpw = value?.ToLower();
+                loginpw = value;
             }
         }
 

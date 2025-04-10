@@ -1,5 +1,7 @@
 ﻿using HpManagement.DBModel;
+using HpManagement.DBModel.DBDTO;
 using HpManagement.DTO;
+using HpManagement.Helpers;
 using HpManagement.Repository.Login;
 using HpManagement.Services.Logger;
 using HpManagement.Services.Redis;
@@ -40,44 +42,79 @@ namespace HpManagement.Services.Login
             {
                 if(String.IsNullOrWhiteSpace(dto.LoginID))
                 {
+                    /* 아이디가 비어있음. */
+                    return new ResponseModel<TokenDTO>() { data = null, code = 204 };
+                }
+                if(String.IsNullOrWhiteSpace(dto.LoginPW))
+                {
+                    /* 비밀번호가 비어있음. */
                     return new ResponseModel<TokenDTO>() { data = null, code = 204 };
                 }
 
-                AdminModel? AdminModel = await LoginRepository.GetAdminInfoAsync(dto.LoginID);
-                if (AdminModel is null)
+                LoginDbDto? AdminModel = await LoginRepository.GetLoginAsync(dto.LoginID);
+                if (AdminModel is not null)
                     return new ResponseModel<TokenDTO>() { data = null, code = 204 };
 
-                List<Claim> authClaims = new List<Claim>();
-                authClaims.Add(new Claim("userId", AdminModel.USERID));
-                authClaims.Add(new Claim("name", AdminModel.USERNM));
-                authClaims.Add(new Claim("role", "Admin"));
-
-                // JWT 인증 페이로드 사인 비밀키
-                var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JWT:authSigningKey"]!));
-
-                JwtSecurityToken token = new JwtSecurityToken(
-                    issuer: Configuration["JWT:Issuer"],
-                    audience: Configuration["JWT:Audience"],
-                    expires: DateTime.Now.AddMinutes(15), // 15분 후 만료
-                    claims: authClaims,
-                    signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256));
-
-                // accessToken
-                string accessToken = new JwtSecurityTokenHandler().WriteToken(token);
-
-                // RefreshToken
-                string refreshToken = TokenComm.GenerateRefreshToken();
-
-                // Redis 캐쉬 저장
-                await RedisCacheService.SetAsync(dto.LoginID, refreshToken);
-                
-
-                var tokenResult = new TokenDTO
+                // 비밀번호 Validator 검사
+                if(!Validator.passwordValidator(dto.LoginPW))
                 {
-                    accessToken = accessToken,
-                    refreshToken = refreshToken
-                };
-                return new ResponseModel<TokenDTO>() { data = tokenResult, code = 200 };
+                    /* 비밀번호 유효성 검사에서 탈락 */
+                    return new ResponseModel<TokenDTO>() { data = null, code = 422 };
+                }
+
+                string shapwd = CipherUtil.EncryptSHA256(dto.LoginPW);
+
+                if(shapwd != AdminModel.PASSWD)
+                {
+                    /* 비밀번호가 다름 */
+                    return new ResponseModel<TokenDTO>() { data = null, code = 404 };
+                }
+
+                if(AdminModel.PERMISSION == "X")
+                {
+                    /* 현재 계정은 로그인 할 수 없습니다. 슈퍼 관리자에게 문의 하십시오! */
+                    return new ResponseModel<TokenDTO>() { data = null, code = 404 };
+                }
+                else if(AdminModel.PERMISSION == "U" || AdminModel.PERMISSION == "W")
+                {
+                    // 여기일땐 무엇인가
+                    // 여기일땐 userJobList.do 컨트롤러를 쏘는데?
+                    return new ResponseModel<TokenDTO>() { data = null, code = 404 };
+                }
+                else  // M 이라고 되어있는데 M이든 뭐든 상관없음.
+                {
+                    List<Claim> authClaims = new List<Claim>();
+                    authClaims.Add(new Claim("userId", AdminModel.USERID)); // 사용자 ID
+                    authClaims.Add(new Claim("name", AdminModel.USERNM)); // 사용자 명
+                    authClaims.Add(new Claim("deptCd", AdminModel.DEPTCD)); // 부서코드
+                    authClaims.Add(new Claim("role", "관리자")); // 권한
+
+                    // JWT 인증 페이로드 사인 비밀키
+                    var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JWT:authSigningKey"]!));
+
+                    JwtSecurityToken token = new JwtSecurityToken(
+                        issuer: Configuration["JWT:Issuer"],
+                        audience: Configuration["JWT:Audience"],
+                        expires: DateTime.Now.AddMinutes(15), // 15분 후 만료
+                        claims: authClaims,
+                        signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256));
+
+                    // accessToken
+                    string accessToken = new JwtSecurityTokenHandler().WriteToken(token);
+
+                    // RefreshToken
+                    string refreshToken = TokenComm.GenerateRefreshToken();
+
+                    // Redis 캐쉬 저장
+                    await RedisCacheService.SetAsync(dto.LoginID, refreshToken);
+
+                    var tokenResult = new TokenDTO
+                    {
+                        accessToken = accessToken,
+                        refreshToken = refreshToken
+                    };
+                    return new ResponseModel<TokenDTO>() { data = tokenResult, code = 200 };
+                }
             }
             catch(Exception ex)
             {
@@ -114,7 +151,7 @@ namespace HpManagement.Services.Login
                 /*
                   UserId로 DB 조회 후 접근제한됐는지 & 진짜있는지 검사를 다시 하면 좋음
                 */
-                var AdminModel = await LoginRepository.GetAdminInfoAsync(refreshTokenDTO.UserId);
+                var AdminModel = await LoginRepository.GetLoginAsync(refreshTokenDTO.UserId);
                 if (AdminModel is null)
                     return new ResponseModel<TokenDTO>() { data = null, code = 204 };
 
@@ -177,7 +214,7 @@ namespace HpManagement.Services.Login
                     return new ResponseModel<TokenDTO>() { data = null, code = 204 };
                 }
 
-                AdminModel? AdminModel = await LoginRepository.GetAdminInfoAsync(dto.LoginID);
+                var AdminModel = await LoginRepository.GetLoginAsync(dto.LoginID);
                 if (AdminModel is null)
                     return new ResponseModel<TokenDTO>() { data = null, code = 204 };
 
@@ -249,7 +286,7 @@ namespace HpManagement.Services.Login
                 /*
                  UserId로 DB 조회 후 접근제한됐는지 & 진짜있는지 검사를 다시 하면 좋음
                  */
-                AdminModel? AdminModel = await LoginRepository.GetAdminInfoAsync(refreshTokenDTO.UserId);
+                var AdminModel = await LoginRepository.GetLoginAsync(refreshTokenDTO.UserId);
                 if (AdminModel is null)
                     return new ResponseModel<TokenDTO>() { data = null, code = 204 };
 

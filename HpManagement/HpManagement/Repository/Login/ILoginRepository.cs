@@ -1,4 +1,5 @@
 ﻿using HpManagement.DBModel;
+using HpManagement.DBModel.DBDTO;
 using HpManagement.DTO;
 
 namespace HpManagement.Repository.Login
@@ -10,6 +11,6 @@ namespace HpManagement.Repository.Login
         /// </summary>
         /// <param name="dto"></param>
         /// <returns></returns>
-        public Task<AdminModel> GetAdminInfoAsync(string userid);
+        public Task<LoginDbDto> GetLoginAsync(string userid);
     }
 }
