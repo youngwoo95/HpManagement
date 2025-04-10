@@ -1,7 +1,7 @@
 ﻿namespace HpManagement.DBModel
 {
     /// <summary>
-    /// 부서간 거리정보
+    /// 부서간 거리정보 테이블
     /// </summary>
     public class DistModel
     {

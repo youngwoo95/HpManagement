@@ -1,7 +1,7 @@
 ﻿namespace HpManagement.DBModel
 {
     /// <summary>
-    /// 이송요원 정보 테이블 모델클래스
+    /// 이송요원 정보 테이블
     /// </summary>
     public class AgentModel
     {

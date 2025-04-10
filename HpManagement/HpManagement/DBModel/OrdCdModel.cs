@@ -1,19 +1,24 @@
 ﻿namespace HpManagement.DBModel
 {
     /// <summary>
-    /// 그룹코드 정보 테이블
+    /// 처방정보 테이블
     /// </summary>
-    public class GrpCodeModel
+    public class OrdCdModel
     {
         /// <summary>
-        /// 그룹코드
+        /// 처방코드
         /// </summary>
-        public string GRPCODE { get; set; } = null!;
+        public string ORD_CD { get; set; } = null!;
 
         /// <summary>
-        /// 그룹코드명
+        /// 처방명
         /// </summary>
-        public string GRPCODENM { get; set; } = null!;
+        public string ORD_NM { get; set; } = null!;
+
+        /// <summary>
+        /// 업무우선순위
+        /// </summary>
+        public int? ORD_SEQ { get; set; }
 
         /// <summary>
         /// 사용여부

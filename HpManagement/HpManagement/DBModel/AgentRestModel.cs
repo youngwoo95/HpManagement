@@ -1,14 +1,14 @@
 ﻿namespace HpManagement.DBModel
 {
     /// <summary>
-    /// 이송요원 휴식정보
+    /// 이송요원 휴식정보 테이블
     /// </summary>
     public class AgentRestModel
     {
         /// <summary>
         /// 근무일자
         /// </summary>
-        public DateTime? RDATE { get; set; }
+        public DateOnly? RDATE { get; set; }
 
         /// <summary>
         /// 사원 ID

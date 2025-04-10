@@ -1,7 +1,7 @@
 ﻿namespace HpManagement.DBModel
 {
     /// <summary>
-    /// 코드정보
+    /// 코드정보 테이블
     /// </summary>
     public class CodeModel
     {
@@ -38,6 +38,6 @@
         /// <summary>
         /// 등록일
         /// </summary>
-        public DateTime? RDATE { get; set; }
+        public DateOnly? RDATE { get; set; }
     }
 }

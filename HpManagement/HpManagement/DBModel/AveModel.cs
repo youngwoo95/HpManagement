@@ -1,7 +1,7 @@
 ﻿namespace HpManagement.DBModel
 {
     /// <summary>
-    /// 집결지 정보
+    /// 집결지 정보 테이블
     /// </summary>
     public class AveModel
     {
@@ -28,6 +28,6 @@
         /// <summary>
         /// 등록일
         /// </summary>
-        public DateTime? RDATE { get; set; }
+        public DateOnly? RDATE { get; set; }
     }
 }

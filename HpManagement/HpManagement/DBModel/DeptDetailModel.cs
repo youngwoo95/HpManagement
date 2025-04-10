@@ -1,7 +1,7 @@
 ﻿namespace HpManagement.DBModel
 {
     /// <summary>
-    /// 세부부서 정보
+    /// 세부부서 정보 테이블
     /// </summary>
     public class DeptDetailModel
     {

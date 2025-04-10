@@ -1,14 +1,14 @@
 ﻿namespace HpManagement.DBModel
 {
     /// <summary>
-    /// 이송요원 연장근무정보
+    /// 이송요원 연장근무정보 테이블
     /// </summary>
     public class AgentExtimeModel
     {
         /// <summary>
         /// 근무일자
         /// </summary>
-        public DateTime RDATE { get; set; }
+        public DateOnly RDATE { get; set; }
 
         /// <summary>
         /// 사원ID

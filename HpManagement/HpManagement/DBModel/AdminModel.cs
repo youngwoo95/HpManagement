@@ -1,7 +1,7 @@
 ﻿namespace HpManagement.DBModel
 {
     /// <summary>
-    /// 이송관리자 테이블 모델 클래스
+    /// 이송관리자 테이블
     /// </summary>
     public class AdminModel
     {
@@ -33,12 +33,12 @@
         /// <summary>
         /// 등록일자
         /// </summary>
-        public DateTime? RDATE { get; set; }
+        public DateOnly? RDATE { get; set; }
 
         /// <summary>
         /// 해지일자
         /// </summary>
-        public DateTime? CDATE { get; set; }
+        public DateOnly? CDATE { get; set; }
 
         /// <summary>
         /// 관리자

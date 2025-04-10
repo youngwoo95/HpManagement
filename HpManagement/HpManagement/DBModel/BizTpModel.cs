@@ -1,7 +1,7 @@
 ﻿namespace HpManagement.DBModel
 {
     /// <summary>
-    /// 이송업무 유형정보
+    /// 이송업무 유형정보 테이블
     /// </summary>
     public class BizTpModel
     {
@@ -33,6 +33,6 @@
         /// <summary>
         /// 등록일
         /// </summary>
-        public DateTime? RDATE { get; set; }
+        public DateOnly? RDATE { get; set; }
     }
 }

@@ -1,7 +1,7 @@
 ﻿namespace HpManagement.DBModel
 {
     /// <summary>
-    /// 예외부서 정보
+    /// 예외부서 정보 테이블
     /// </summary>
     public class DeptExModel
     {
@@ -28,7 +28,7 @@
         /// <summary>
         /// 등록일
         /// </summary>
-        public DateTime? RDATE { get; set; }
+        public DateOnly? RDATE { get; set; }
 
     }
 }

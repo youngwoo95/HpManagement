@@ -1,7 +1,7 @@
 ﻿namespace HpManagement.DBModel
 {
     /// <summary>
-    /// 부서정보
+    /// 부서정보 테이블
     /// </summary>
     public class DeptModel
     {
@@ -58,7 +58,7 @@
         /// <summary>
         /// 수정일
         /// </summary>
-        public DateTime? LAST_UPDT_DT { get; set; }
+        public DateOnly? LAST_UPDT_DT { get; set; }
 
         /// <summary>
         /// 사용여부
